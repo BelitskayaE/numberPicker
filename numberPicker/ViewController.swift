@@ -10,12 +10,9 @@ import UIKit
 
 class ViewController: UIViewController, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
 
-       
-    
     //make a photo
     var imagePicker: UIImagePickerController!
     @IBOutlet weak var ImageView: UIImageView!
-    
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -36,22 +33,18 @@ class ViewController: UIViewController, UINavigationControllerDelegate, UIImageP
     }
     
     //send request to ocr
-    let resourceString = "https://westus.api.cognitive.microsoft.com/vision/v2.0/ocr?"
-    
-    let parameters: [String : String] = [
-               "language": "en",
-               "detectOrientation": "true",
-           ]
 
-    
     func sendRequest(image:UIImage) {
-        let resourceStringWithParams = resourceString + parameters["language"]! + parameters["detectOrientation"]!
-        let resourceUrl = URL(string: resourceStringWithParams)
+        let resourceUrl = URL(string: "https://api.ocr.space/parse/image")
+        let compressedImage = image.jpegData(compressionQuality: 400)
+        let boundary = "--------69-69-69-69-69"
         var request = URLRequest(url: resourceUrl!)
         request.httpMethod = "POST"
-        let requestBody = image.jpegData(compressionQuality: 100)
-        request.httpBody = requestBody
-        
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        request.addValue("fc26587bda88957", forHTTPHeaderField: "apikey" )
+        request.httpBody = createBody(parameters: nil, filePathKey: "file", imageDataKey: compressedImage!, boundary: boundary)
+       
         let task = URLSession.shared.dataTask(with: request) { (data, response, error) in
                 
                 // Check for Error
@@ -62,17 +55,44 @@ class ViewController: UIViewController, UINavigationControllerDelegate, UIImageP
          
                 // Convert HTTP Response Data to a String
                 if let data = data, let dataString = String(data: data, encoding: .utf8) {
-                    print("Response data string:\n \(dataString)")
+                    print("ааааааааааааааа \(dataString)")
+                    
                 }
         }
         task.resume()
-        
+    
     }
     
+    
+    
+    private func createBody(parameters: [String: String]?, filePathKey: String?, imageDataKey: Data, boundary: String) -> Data {
+        var body = Data();
 
+        if parameters != nil {
+            for (key, value) in parameters! {
+                body.append("--\(boundary)\r\n".data(using: String.Encoding.utf8)!)
+                body.append("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n".data(using: String.Encoding.utf8)!)
+                body.append("\(value)\r\n".data(using: String.Encoding.utf8)!)
+            }
+        }
+
+        let filename = "image.jpeg"
+        let mimetype = "image/jpeg"
+
+        body.append("--\(boundary)\r\n".data(using: String.Encoding.utf8)!)
+        body.append("Content-Disposition: form-data; name=\"\(filePathKey!)\"; filename=\"\(filename)\"\r\n".data(using: String.Encoding.utf8)!)
+        body.append("Content-Type: \(mimetype)\r\n\r\n".data(using: String.Encoding.utf8)!)
+        body.append(imageDataKey)
+        body.append("\r\n".data(using: String.Encoding.utf8)!)
+
+        body.append("--\(boundary)--\r\n".data(using: String.Encoding.utf8)!)
+
+        return body
+    }
     
     
 
+    
 
 }
 
